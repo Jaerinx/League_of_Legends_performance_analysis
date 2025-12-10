@@ -80,8 +80,22 @@ Since the results were so extreme, (p-value near 0), we can use this in our prog
 
 
 ## Framing a Prediction Problem
-Our prediction model is a classifier to predict the game result using the data at the 25 minute mark. Since the response variable could have one of two results - winning and losing - our model is a binary classifier. Our response variable of choice alligns with all our previous intentions so far to find the most ideal 
+Our prediction model is a classifier to predict the game result using the data at the 25 minute mark. Since the response variable could have one of two results - winning and losing - our model is a binary classifier. Our response variable of choice aligns with all our previous intentions so far to find the ideal tactic to win the game. To evaluate our model we will use the F1-score, the data reported may vary by league and result in bias, therefore a balance between precision and recall suits our needs. 
 
 ## Baseline Model
+For our initial baseline model, we decided to use a DecisionTree to predict wins and loses from features `goldat25` and `xpat25`, both quantitative variables so no encoding was necessary. We also did not specify a max_depth. While the model could go as deep as it wanted, it only had a precision and recal of 55%, which is only 5% better than guessing randomly. We knew that this didn't meet our expectations, so we wanted to improve our model to get a better result. 
+
 ## Final Model
+In our final model, we switched from a DecisionTree to a RandomForest, and we added the following hyperparameters - max_depth, number of estimators, max_features, and bootstrapping. Throughout the analysis carried out in the steps prior, we realized that the most informative data occurs at the 25 minute mark. Therefore, expanding our baseline model features, our RandomForest contains all the columns with recorded data at 25 minutes, including `goldat25`, `xpat25`, `csat25`, `opp_goldat25`, `opp_xpat25`, `opp_csat25`, `golddiffat25`, `xpdiffat25`, `csdiffat25`, `killsat25`, `assistsat25`, `deathsat25`, `opp_killsat25`, `opp_assistsat25`, and `opp_deathsat25`. All of these columns are quantitative, and we performed quadratic feature engineering by multiplying together each pair of features, which makes the underlying pattern in the data generating process more clear. Considering the data generation process itself, it is logical that these are the best predictors for the result, since information about the teams' performance mid-game is more indicative of their potential than the other stats recorded in the dataset.
+
+As expected this model greatly outperformed the baseline model, reaching an accuracy of ____. The optimal hyperparameters ended up being ____, ____. Therefore, using the statistics at 25 minutes into the game we were able to successfully train a model that can almost always predict whether a team is going to win. 
+
 ## Fairness Analysis
+Throughout various steps of analysis, we realized that a lot of the data reported depends on `league`, as different regions may report information differently. Because of this, we wanted to test the fairness of our model by exploring potential biases arising from differences between leagues. Our Group X was the predicted `result`, and our Group Y was the `league`, and we permuted the `league` column because the model seemed a lot more biased for the LCL league in particular. 
+* **Null Hypothesis**: The `league` has no association with the quality of the prediction of the `result`.
+* **Alternate Hypothesis**: The `league` is associated with a better or worse preduction of the `result`.
+* **Test Statistic**: F1-score of the model.
+* **Significance Level**: 0.05
+
+Results: 
+* Our p-value of ____ is less than alpha of 0.05, so we reject the null hypothesis. This means that our model is in fact likely biased, and that the quality of the predictions depend on which league the data is reported for. While unfortunate for the fairness of our model, it is realistic for real-world data since the data was collected by thousands of different people in different areas of the world.
