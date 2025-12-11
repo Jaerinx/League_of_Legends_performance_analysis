@@ -51,9 +51,12 @@ Below is the `head` of our cleaned dataframe:
 
 ### Univariate Analysis Plot
 
-<iframe src="assets/univariate_analysis.html" width="800" height="600" frameborder="0"></iframe>
+<iframe src="assets/univariate_analysis.html" width="1200" height="600" frameborder="1"></iframe>
 
 ### Bivariate Analysis Plot
+
+<iframe src="assets/bivariate_analysis_winsvsgold.html" width="1200" height="600" frameborder="1"></iframe>
+<iframe src="assets/bivariate_analysis_wins_with_without_firstdragon.html" width="1200" height="600" frameborder="1"></iframe>
 
 ### Interesting Aggregates
 
