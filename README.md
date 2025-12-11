@@ -2,20 +2,42 @@
 
 By Hieu Nguyen and Palina Volskaya
 
-## Introduction
+- [Predicting a Legend - League of Legends Performance Analysis](#predicting-a-legend---league-of-legends-performance-analysis)
+  - [1. Introduction](#1-introduction)
+    - [Column introduction](#column-introduction)
+  - [2. Data Cleaning and Exploratory Data Analysis](#2-data-cleaning-and-exploratory-data-analysis)
+    - [Univariate Analysis Plot](#univariate-analysis-plot)
+    - [Bivariate Analysis Plot](#bivariate-analysis-plot)
+    - [Interesting Aggregates](#interesting-aggregates)
+  - [3. Assessment of Missingness](#3-assessment-of-missingness)
+    - [NMAR Analysis](#nmar-analysis)
+    - [Missingness Dependency](#missingness-dependency)
+  - [4. Hypothesis Testing](#4-hypothesis-testing)
+  - [5. Framing a Prediction Problem](#5-framing-a-prediction-problem)
+  - [6. Baseline Model](#6-baseline-model)
+  - [7. Final Model](#7-final-model)
+    - [Fairness Analysis](#fairness-analysis)
+
+## 1. Introduction
 
 Our dataset of choice is the team and player data of over 10,000 2022 League of Legends matches, sourced from Oracle's Elixir. As data scietists and as keen video game players, we want to figure out the best strategies for winning. More formally, we want to find the most ideal circumstances for the result to be a win, going through the various stages of data analysis to fully utilize the features in the dataset to make an informed prediction. Our research question was: How do we best predict whether a team will win a League of Legends game, given certain parameters throughout the game?
 
 The original dataset contains 150,588 rows. However, based on the data generation process, each game is reported for each player of each team with two more rows for team statistics. Therefore, the dataset we used aggregated by teams in each game has 25,098 rows.
 
-Relevant columns (features we wanted to explore) include:
+Throughout the progress of this paper, we aim to answer to the best of our abilities the central question: **To What extent are we able to reliably predict whether or not a team will win in a given game**
+
+### Column introduction
+
+The dataset (originally containing 164 columns and 150,588 rows) contains comprehensive data gathering of each individual players stats throughout a game: kills, deaths, assists, position, etc. Within this dataset, we will only be exploring a subset of key columns that we believed are central to the question we want to answer:
 
 - `gameid`: unique integer identifier of each game.
 - `teamid`: unique integer identifier of each team.
+- `teamname`: name of the team (this was used mostly as a more readable form of the teamid)
 - `position`: string "team" to indicate team row, or player position in game.
 - `result`: 1 or 0 for each row to represent a win or loss, respectively.
 - `firstdragon`: 1.0 or 0.0 whether that team has secured the first dragon.
 - `league`: string abbreviation for each team's league, which are based on region and serve as preliminary steps for Worlds - the world championship.
+- `goldspent`: The total gold spent by teams throughout the entire game
   Our final machine learning model used all of the data available at 25 minutes into the game:
 - `goldat25`: total gold aquired by a certain team at 25 minutes into the game.
 - `xpat25`: xp aquired by a certain team 25 minutes into the game.
@@ -33,11 +55,9 @@ Relevant columns (features we wanted to explore) include:
 - `opp_assistsat25`: opponent's assists 25 minutes into the game.
 - `opp_deathsat25`: opponent's deaths 25 minutes into the game.
 
-(Note: columns with 1/0 pairs were converted into booleans during the Data Cleaning process.)
+## 2. Data Cleaning and Exploratory Data Analysis
 
-## Data Cleaning and Exploratory Data Analysis
-
-The dataset contained a lot of duplication and unecessary missingness due to rows being in groups of 12 - 5 rows for each player of each teams plus two rows for general team statistics of that game. Therefore, to fully make use of the dataset we divided team and player data into two dataframes based on the `position` column, checking if the row was recorded as a team. For easier manipulation of the dataframe later on, we converted the results and firstdragon columns to booleans. During the machine learning step, we dropped all missing values from the "\_\_at25" columns so we could work with the available data.
+To save processing power and time, we first reduced the dataset to only the relevant columns. Further, it contained a lot of duplication and unnecessary missingness due to rows being in groups of 12 - 5 rows for each player of each teams plus two rows for general team statistics of that game. Therefore, to fully make use of the dataset we divided team and player data into two dataframes based on the `position` column, checking if the row was recorded as a team. As our central question focused more on predicting wins, which is a statistic tied to a team moreso than a player, we only kept the teams table going forward into our exploration. Moreover, during the machine learning step, we dropped all missing values from the "\_\_at25" columns so we could work with the available data.
 
 Below is the `head` of our cleaned dataframe:
 
@@ -49,18 +69,87 @@ Below is the `head` of our cleaned dataframe:
 | ESPORTSTMNT01_2690219 | oe:team:e7a7c6bf58eb268ed3f13aac4158aa8 | team     | True   | True        |    46615 |  57155 | LCKC   |    46615 |  57155 |    928 |        39335 |      49409 |        895 |         7280 |       7746 |         33 |         8 |          13 |          1 |             1 |               1 |              8 |
 | 8401-8401_game_1      | oe:team:f4c4528c6981e104a11ea7548630c23 | team     | True   | False       |      nan |    nan | LPL    |      nan |    nan |    nan |          nan |        nan |        nan |          nan |        nan |        nan |       nan |         nan |        nan |           nan |             nan |            nan |
 
+Figure 2.1: Head of teams table
+
 ### Univariate Analysis Plot
 
-<iframe src="assets/univariate_analysis.html" width="1200" height="600" frameborder="1"></iframe>
+We performed a univariate analysis looking at the frequency of games played for each league.
+
+<figure>
+    <iframe src="assets/univariate_analysis.html" width="1000" height="600" frameborder="1"></iframe>
+    <figcaption>Figure 2.2: Univariate analysis games played for each league</figcaption>
+</figure>
+
+The bar chart shows that the distribution of games across leagues are not uniform: in fact the full range of games between leagues spans `926` games: a significant number larger than most other league game frequencies. This is no-doubt valuable knowledge about the dataset we will be needing for future analysis.
 
 ### Bivariate Analysis Plot
 
-<iframe src="assets/bivariate_analysis_winsvsgold.html" width="1200" height="600" frameborder="1"></iframe>
-<iframe src="assets/bivariate_analysis_wins_with_without_firstdragon.html" width="1200" height="600" frameborder="1"></iframe>
+To further understand the possible factors that could impact the winrate of a team, we plotted a scatter of the average win-rate of a given team against their average amount of gold spent. To reduce noise in the dataset generated by teams that simply have not played that many matches and therefore become more prone to biases, we filtered the data set for only teams that have played more than 30 matches.
+
+<figure>
+    <iframe src="assets/bivariate_analysis_winsvsgold.html" width="1000" height="600" frameborder="1"></iframe>
+    <figcaption>Figure 2.3: Bivariate analysis of winrate against gold spent</figcaption>
+</figure>
+
+This plot showed us a roughly linear relationship between the win-rate of a team as well as their gold spent. Leading us to want to do further analysis into this.
+
+Further, another major aspect of League of Legends games is whether or not teams are able to attain the first dragon. Attaining the first dragon gives the team a minor but permanent stat boost for the rest of the game, creating a clear advantage for them to win.
+
+<figure>
+    <iframe src="assets/bivariate_analysis_wins_with_without_firstdragon.html" width="1000" height="600" frameborder="1"></iframe>
+    <figcaption><i>Figure 2.4: Conditional distribution of win rate for first dragons</i></figcaption>
+</figure>
+
+And by looking into the conditional distribution of win-rates we can see a (at least qualitatively) significant increase in win-rate for teams that are able to claim the first dragon
 
 ### Interesting Aggregates
 
-## Assessment of Missingness
+Here are some interesting aggregates we found:
+
+| first dragon             | # average gold spent | # average kills per death | # average win percentage |
+| ------------------------ | -------------------: | ------------------------: | -----------------------: |
+| Did NOT get first dragon |             52414.56 |                      1.43 |                    42.16 |
+| Got first dragon         |             53313.00 |                      1.94 |                    57.84 |
+
+_Figure 2.5: Interesting aggregates of teams that claim and don't claim the first dragon_
+
+Here, we see that amongst all the statistics: gold spent, kills per death, win percentage, teams that attain the first dragon have a higher average. However, the average kills per death is a signifying column; at this stage we cannot certainly identify that getting the first dragon is really what is increasing these stats, as the teams that simply attain the first dragons are just more likely to be skilled anyway, and thus more likely to win these games.
+
+Looking further into this behaviour, we explored and plotted for each team: their win rate for games where they are able to attain this first dragon and for games in which they are not. We provide below here a sample of our plot:
+
+<figure>
+<iframe src="assets\interesting_agg_sample_dragon.html" width="1000" height="600" frameborder="1"></iframe>
+<figcaption><i>Figure 2.6: Sample of win rate with or without first dragons for each team</i></figcaption>
+</figure>
+
+| teamname                  | no_first_dragon_win_pct | first_dragon_win_pct |
+| ------------------------- | ----------------------- | -------------------- |
+| FC Schalke 04 Esports     | 0.5454545454545454      | 0.6785714285714286   |
+| Team Whales               | 0.52                    | 0.5                  |
+| PENTA 1860                | 0.2777777777777778      | 0.2222222222222222   |
+| Dplus KIA Challengers     | 0.4489795918367347      | 0.7692307692307693   |
+| XTEN Esports              | 0.23809523809523808     | 0.6666666666666666   |
+| Wizards                   | 0.3333333333333333      | 1.0                  |
+| inf                       | 0.4074074074074074      | 0.6666666666666666   |
+| Infamous SoloQ Players    | 0.14285714285714285     | 0.6                  |
+| AGO ROGUE                 | 0.5833333333333334      | 0.8709677419354839   |
+| Meme City Esports         | 0.0                     | 0.4                  |
+| Descuydado Aucas Esports  | 0.8333333333333334      | 0.8823529411764706   |
+| İstanbul Wildcats Academy | 0.4666666666666667      | 0.6785714285714286   |
+| Guasones                  | 0.4                     | 0.75                 |
+| Spirituals                | 0.3333333333333333      | 0.46153846153846156  |
+| Prima-T                   | 1.0                     | 1.0                  |
+| Ginger Turmeric           | 0.5882352941176471      | 0.8                  |
+| Liiv SANDBOX              | 0.3170731707317073      | 0.5517241379310345   |
+| AVE Axolotl               | 0.35714285714285715     | 0.5714285714285714   |
+| One Breath Gaming         | 1.0                     | 1.0                  |
+| Aurum Gaming              | 0.0                     | 0.0                  |
+
+_Figure 2.7: Sample of Pivot table deoniting win rate with or without first dragon of each team_
+
+As seen above here, first dragon's impact on the win status of a game is an element of further analysis as this graph seems to be suggesting that for the most part, if you claim the first dragon, you are significantly more likely to win the game.
+
+## 3. Assessment of Missingness
 
 ### NMAR Analysis
 
@@ -73,52 +162,82 @@ Once we realized that metrics 25 minutes into the game were extremely relevant t
 `gamelength`:
 
 - **Null Hypothesis:** The missingness of `goldat25` is independent of `gamelength`.
-- **Alternate Hypothesis:** The missingness of `goldat25` is associated with `gamelength`.
+- **Alternate Hypothesis:** `gamelength` values are significantly shorter where `goldat25` is missing.
 
-Our results showed a very low p-value, leading us to reject our null hypothesis. Based on the test, it is likely that the missingness of `goldat25` was associated with `gamelength`. This makes sense logically as games that finish early will be more likely to have unrecorded values past their finish time.
+Making use of the mean `gamelength` where `goldat25` is missing and permuting the `goldat25` column, our findings showed us a p value of `0`. This lead us to reject our null hypothesis. Based on the test, it is likely that the missingness of `goldat25` was associated with `gamelength`; `gamelength` values seem significantly shorter where `goldat25` is missing. This makes sense logically as games that finish early will be more likely to have unrecorded values past their finish time.
+
+<figure>
+<iframe src="assets/missingness_gamelength.html" width="1000" height="600" frameborder="1"></iframe>
+<figcaption><i>Figure 3.1: Assessment of missingness dependency of goldat25 on gamelength</i></figcaption>
+</figure>
 
 `firstdragon`:
 
-- **Null Hypothesis**: The missingness of `goldat25` is independent of `firstdragon`.
-- **Alternate Hypothesis**: The missingness of `goldat25` is associated with `firstdragon`.
+- **Null Hypothesis**: `firstdragon's` occur equally as likely regardless of the missingness of `goldat25`.
+- **Alternate Hypothesis**: `firstdragon`'s are more likely to occur when `goldat25` is missing.
 
-Our results returned an insignificant p-value, meaning that we fail to reject the null hypothesis and the missingness of `goldat25` is not influenced by the `firstdragon` column.
+Our results returned an insignificant p-value: `0.454` , meaning that we fail to reject the null hypothesis and the missingness of `goldat25` is not influenced by the `firstdragon` column.
 
-## Hypothesis Testing
+<figure>
+<iframe src="assets/missingness_firstdragon.html" width="1000" height="600" frameborder="1"></iframe>
+<figcaption><i>Figure 3.1: Assessment of missingness dependency of goldat25 on firstdragon</i></figcaption>
+</figure>
+
+## 4. Hypothesis Testing
+
+To further our exploration into the impact of first dragons on the chance of a team winning the game, we decided to test out the hypothesis suggested by _figure 2.4_.
 
 - **Null Hypothesis:** The win rate between teams who secure the first dragon is equal to the win rate of teams that do not secure the first dragon.
-- **Alternate Hypothesis:** The win rate between teams who secure the first dragon is different from the win rate of teams that do not secure the first dragon.
+- **Alternate Hypothesis:** The win rate between teams who secure the first dragon is significantly higher than the win rate of teams that do not secure the first dragon.
 - **Test statistic:** Difference in win rate between games with and without securing the first dragon.
 
 Note: testing at significance level of 0.05.
 
-The permutation test resulted in a p-value of 0.0 which is less than 0.05, we reject the null hypothesis. Based on the data, the win rate of teams who secure the first dragon is significantly higher than teams that do not secure the first dragon.
+We ran a permutation test: Permuting over the firstdragon column and calculating the difference in winrate between teams who secure a first dragon and teams who do not. The permutation test resulted in a p-value of 0.0 which is less than 0.05, we reject the null hypothesis. Not only this, basing off the graph, this difference appears to be significantly higher. Based on the data, the win rate of teams who secure the first dragon is significantly higher than teams that do not secure the first dragon.
+
+<figure>
+<iframe src="assets/hypothesis_test.html" width="1000" height="600" frameborder="1"></iframe>
+<figcaption><i>Figure 4.1: Results of first dragon impact on win rate permutation test</i></figcaption>
+</figure>
 
 Since the results were so extreme, (p-value near 0), we can use this in our progress of determining the best circumstances for a win. This test was helpful in determining that `firstdragon` is in fact a very useful feature to consider when predicting win rates.
 
-## Framing a Prediction Problem
+However, in game, first dragons spawn at the 5 minute mark and have no upper bound time limit for when they can be claimed, meaning they can be claimed early game, mid game or even never throughout the game. In fact, within the teams table, the first dragon column contained `2196` missing records, signifying that out of `12549`, 18% of games finish without either team even claiming the first dragon. And thus, therefore as strategists and gamers, we can say that a first dragon would be able to certainly increase our chances of winning. However, as data scientists, whether or not a team claims a first dragon, in terms of the underlying data generating process, cannot be used to predict the results of a game.
 
-Our prediction model is a classifier to predict the game result using the data at the 25 minute mark. Since the response variable could have one of two results - winning and losing - our model is a binary classifier. Our response variable of choice aligns with all our previous intentions so far to find the ideal tactic to win the game. To evaluate our model we will use the F1-score, the data reported may vary by league and result in bias, therefore a balance between precision and recall suits our needs.
+## 5. Framing a Prediction Problem
 
-## Baseline Model
+After the initial analysis, in an attempt to look deeper into the underlying data generating process and what impacts results, we wanted to attempt predicting whether a team will be able to win a match based only on their results at the 25 minute mark. Our prediction model is a classifier to predict the game result using the data at the 25 minute mark. Since the response variable could have one of two results - winning and losing - our model is a binary classifier. Our response variable of choice aligns with all our previous intentions so far to find the ideal tactic to win the game. To evaluate our model we will use the F1-score; The data reported, as shown in the univariate analysis plot above vary's largely by league and thus will result in bias, therefore a balance between precision and recall suits our needs and the specifications of this dataset.
 
-For our initial baseline model, we decided to use a DecisionTree to predict wins and loses from features `goldat25` and `xpat25`, both quantitative variables so no encoding was necessary. We also did not specify a max_depth. While the model could go as deep as it wanted, it only had a precision and recal of 55%, which is only 5% better than guessing randomly. We knew that this didn't meet our expectations, so we wanted to improve our model to get a better result.
+## 6. Baseline Model
 
-## Final Model
+For our initial baseline model, we decided to use a DecisionTree to predict wins and loses from features `goldat25` and `xpat25`, both quantitative variables so no encoding was necessary. Making use of a standard train-test-split ratio of 20-80 test:train to train our model, we did not specify any specific hyperparameters at this stage such as max_depth. While the model could go as deep as it wanted, it only had a precision of `0.698` and recall of `0.558` with an overall F_1 score of `0.620`: only `.12` better than a "base-case" modal that guesses win for all data points within this data set. We knew that this didn't meet our expectations, so we wanted to improve our model to get a better result.
 
-In our final model, we switched from a DecisionTree to a RandomForest, and we added the following hyperparameters - max_depth, number of estimators, max_features, and bootstrapping. Throughout the analysis carried out in the steps prior, we realized that the most informative data occurs at the 25 minute mark. Therefore, expanding our baseline model features, our RandomForest contains all the columns with recorded data at 25 minutes, including `goldat25`, `xpat25`, `csat25`, `opp_goldat25`, `opp_xpat25`, `opp_csat25`, `golddiffat25`, `xpdiffat25`, `csdiffat25`, `killsat25`, `assistsat25`, `deathsat25`, `opp_killsat25`, `opp_assistsat25`, and `opp_deathsat25`. All of these columns are quantitative, and we performed quadratic feature engineering by multiplying together each pair of features, which makes the underlying pattern in the data generating process more clear. Considering the data generation process itself, it is logical that these are the best predictors for the result, since information about the teams' performance mid-game is more indicative of their potential than the other stats recorded in the dataset.
+## 7. Final Model
 
-As expected this model greatly outperformed the baseline model, reaching an accuracy of [ ]. The optimal hyperparameters ended up being [ ], [ ]. Therefore, using the statistics at 25 minutes into the game we were able to successfully train a model that can almost always predict whether a team is going to win.
+In our final model, we switched from a DecisionTree to a RandomForest — one that would be much more resilient to overfitting which we will need. We added the following hyperparameters making use of a Grid Search in order to find the optimal parameter values: max_depth (`[None, 5, 10, 20]`), number of estimators ([`[100, 200, 300, 500]`]), max_features ([`'sqrt','log2'`]), and whether or not to bootstrap the data. Throughout the analysis carried out in the steps prior, we realized that the most informative data occurs at the 25 minute mark. Therefore, expanding our baseline model features, our RandomForest contains all the columns with recorded data at 25 minutes, including `goldat25`, `xpat25`, `csat25`, `opp_goldat25`, `opp_xpat25`, `opp_csat25`, `golddiffat25`, `xpdiffat25`, `csdiffat25`, `killsat25`, `assistsat25`, `deathsat25`, `opp_killsat25`, `opp_assistsat25`, and `opp_deathsat25`. All of these columns are quantitative, and we feature engineered crosses between featuresets by multiplying together all pair of features, which makes the underlying pattern in the data generating process more clear and would allow the random forest to better capture the complex relationships between features themselves (such as the relationship between kills and deaths, which interact antagonisticly to us intuitively). Considering the data generation process itself, it is logical that these are the best predictors for the result, since information about the teams' performance mid-game is more indicative of their potential than the other stats recorded in the dataset.
 
-## Fairness Analysis
+As expected this model greatly outperformed the baseline model, reaching an F-1 score of `0.85`. The optimal hyperparameters ended up being `{'bootstrap': True, 'max_depth': 5, 'max_features': 'log2', 'n_estimators': 100}`. Therefore, using the statistics at 25 minutes into the game we were able to successfully train a model that can predict whether a team is going to win consistently.
 
-Throughout various steps of analysis, we realized that a lot of the data reported depends on `league`, as different regions may report information differently. Because of this, we wanted to test the fairness of our model by exploring potential biases arising from differences between leagues. Our Group X was the predicted `result`, and our Group Y was the `league`, and we permuted the `league` column because the model seemed a lot more biased for the LCL league in particular.
+### Fairness Analysis
+
+Throughout various steps of analysis, we realized that a lot of the data reported depends on `league`, as different regions may report information differently. Because of this, we wanted to test the fairness of our model by exploring potential biases arising from differences between leagues.Doing a simply Univariate analysis of our model's performance across leagues, There is a clear outlier in the LCL league:
+
+<figure>
+<iframe src="assets\Side-by-side_precision_for_each_league.html" width="1000" height="600" frameborder="1"></iframe>
+<figcaption><i>Figure 7.1: Side by side comparison of F-1 scores separated by league</i></figcaption>
+</figure>
+Because of this, we decided to further conduct analysis into the significance of this outlier.
+
+Our Group X was the predicted `result`, and our Group Y was the `league`, and we permuted over the `league` column, computing the difference in the F-1 score of the model between games within and not within the LCL league after permutation.
 
 - **Null Hypothesis**: The `league` has no association with the quality of the prediction of the `result`.
-- **Alternate Hypothesis**: The `league` is associated with a better or worse preduction of the `result`.
-- **Test Statistic**: F1-score of the model.
+- **Alternate Hypothesis**: The model is overperforming for data records where the `league` is LCL.
+- **Test Statistic**: difference in F-1 score of the model between games within and not wihin the LCL League
 - **Significance Level**: 0.05
 
-Results:
+<figure>
+<iframe src="assets/Distribution of Model F-1.html" width="1000" height="600" frameborder="1"></iframe>
+<figcaption><i>Figure 7.3: Results of permutation test of F-1 model performance for LCL and non-LCL games</i></figcaption>
+</figure>
 
-- Our p-value of [ ] is less than alpha of 0.05, so we reject the null hypothesis. This means that our model is in fact likely biased, and that the quality of the predictions depend on which league the data is reported for. While unfortunate for the fairness of our model, it is realistic for real-world data since the data was collected by thousands of different people in different areas of the world.
+Our p-value of `0.373` is more than the alpha of 0.05, so we reject fail the null hypothesis. This means that the bias seen in our model is likely simply due to chance and that when this result is extrapolated for larger datasets with the same data generating process, that the outlier would even out over time. This gives us more confidence in the performance and longevity of our model.
