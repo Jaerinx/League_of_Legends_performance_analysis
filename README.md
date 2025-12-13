@@ -122,30 +122,31 @@ Looking further into this behaviour, we explored and plotted for each team: thei
 <figcaption><i>Figure 2.6: Sample of win rate with or without first dragons for each team</i></figcaption>
 </figure>
 
-| teamname                             | no_first_dragon_win_pct | first_dragon_win_pct |
-| ------------------------------------ | ----------------------- | -------------------- |
-| paiN Gaming                          | 0.4230769230769231      | 0.7142857142857143   |
-| Spectacled Bears                     | 0.6428571428571429      | 0.64                 |
-| Impact Gaming (Latin American Team)  | 0.0                     | 1.0                  |
-| Burst The Sky Esports                | 0.30434782608695654     | 0.42857142857142855  |
-| UCAM Esports                         | 0.22727272727272727     | 0.6666666666666666   |
-| Eclipse Gaming (Latin American Team) | 1.0                     | 0.5                  |
-| Sector One                           | 0.5                     | 0.2727272727272727   |
-| Riddle Esports                       | 0.46875                 | 0.6774193548387096   |
-| God's Plan                           | 0.3                     | 0.5769230769230769   |
-| Inside Games                         | 0.2857142857142857      | 0.38461538461538464  |
-| Nexus KTRL                           | 0.375                   | 0.4827586206896552   |
-| Team Refuse                          | 0.1875                  | 0.32                 |
-| INTZ                                 | 0.17391304347826086     | 0.23076923076923078  |
-| İstanbul Wildcats                    | 0.5357142857142857      | 0.7714285714285715   |
-| Vanir                                | 0.35714285714285715     | 0.36666666666666664  |
-| Deliverance Esports Peru             | 0.25                    | 0.14285714285714285  |
-| Los Grandes Academy                  | 0.625                   | 0.7142857142857143   |
-| IKISEQ                               | 1.0                     | 1.0                  |
-| Rare Atom                            | 0.3170731707317073      | 0.5116279069767442   |
-| Munster Rugby Gaming                 | 0.5                     | 0.0                  |
-
+| teamname                           | no_first_dragon_win_pct | first_dragon_win_pct |
+|-----------------------------------|--------------------------|----------------------|
+| Team Secret                       | 0.522727                 | 0.625000             |
+| Area of Effect Randoms            | 0.307692                 | 0.500000             |
+| Invulnerables Esports Lotus       | 0.400000                 | 0.000000             |
+| ECORP                             | 0.714286                 | 0.800000             |
+| Only Panitas                      | 0.500000                 | 0.333333             |
+| Team Fracture                     | 0.000000                 | 0.666667             |
+| Anorthosis Famagusta Esports      | 0.545455                 | 0.676471             |
+| Gravitas                          | 0.000000                 | 0.187500             |
+| Goose Gaming                      | 0.000000                 | 0.000000             |
+| Nongshim RedForce Academy         | 0.558824                 | 0.709677             |
+| devils.one                        | 0.166667                 | 0.400000             |
+| Aquatik Esports                   | 0.125000                 | 0.500000             |
+| Verity Esports                    | 1.000000                 | 0.000000             |
+| Leviatan                          | 0.710526                 | 0.827586             |
+| Immortals Academy                 | 0.307692                 | 0.582090             |
+| Panathinaikos AC eSports          | 0.333333                 | NaN                  |
+| Hooked Esports                    | 0.166667                 | 0.333333             |
+| Eternal Kraken                    | 0.000000                 | 0.750000             |
+| One Breath Gaming                 | 1.000000                 | 1.000000             |
+| York University                   | 0.166667                 | 0.500000             |
 _Figure 2.7: Sample of Pivot table deoniting win rate with or without first dragon of each team_
+
+_Note: NaN value here denotes the fact that the team has not attained any first dragons._
 
 As seen above here, first dragon's impact on the win status of a game is an element of further analysis as this graph seems to be suggesting that for the most part, if you claim the first dragon, you are significantly more likely to win the game.
 
