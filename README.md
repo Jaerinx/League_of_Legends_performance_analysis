@@ -176,7 +176,7 @@ Making use of the mean `gamelength` where `goldat25` is missing and permuting th
 - **Null Hypothesis**: `firstdragon's` occur equally as likely regardless of the missingness of `goldat25`.
 - **Alternate Hypothesis**: `firstdragon`'s are more likely to occur when `goldat25` is missing.
 
-Our results returned an insignificant p-value: `0.442` , meaning that we fail to reject the null hypothesis and the missingness of `goldat25` is not influenced by the `firstdragon` column.
+Our results returned an insignificant p-value: `0.501` , meaning that we fail to reject the null hypothesis and the missingness of `goldat25` is not influenced by the `firstdragon` column.
 
 <figure>
 <iframe src="assets/missingness_firstdragon.html" width="100%" height="600" frameborder="0"></iframe>
